@@ -92,10 +92,10 @@ func (o *OPStorage) createAuthRequestScopeAndAudience(ctx context.Context, clien
 		return nil, nil, "", err
 	}
 
-	scope, err = o.assertProjectRoleScopesByProject(ctx, project, reqScope)
-	if err != nil {
-		return nil, nil, "", err
-	}
+	// Role assertion no longer injects implicit role scopes here. The
+	// audience for asserted roles is resolved in prepareRoles instead, so
+	// that only explicitly requested role scopes filter the result.
+	scope = reqScope
 	audience, err = o.audienceFromProjectID(ctx, project.ID)
 	audience = domain.AddAudScopeToAudience(ctx, audience, scope)
 	if err != nil {
@@ -573,29 +573,6 @@ func (o *OPStorage) assertOrgScope(ctx context.Context, scopes []string) (string
 	return id, nil
 }
 
-func (o *OPStorage) assertProjectRoleScopesByProject(ctx context.Context, project *query.Project, scopes []string) ([]string, error) {
-	for _, scope := range scopes {
-		if strings.HasPrefix(scope, ScopeProjectRolePrefix) {
-			return scopes, nil
-		}
-	}
-	if !project.ProjectRoleAssertion {
-		return scopes, nil
-	}
-	projectIDQuery, err := query.NewProjectRoleProjectIDSearchQuery(project.ID)
-	if err != nil {
-		return nil, zerrors.ThrowInternal(err, "OIDC-Cyc78", "Errors.Internal")
-	}
-	roles, err := o.query.SearchProjectRoles(ctx, true, &query.ProjectRoleSearchQueries{Queries: []query.SearchQuery{projectIDQuery}}, nil)
-	if err != nil {
-		return nil, err
-	}
-	for _, role := range roles.ProjectRoles {
-		scopes = append(scopes, ScopeProjectRolePrefix+role.Key)
-	}
-	return scopes, nil
-}
-
 func setContextUserSystem(ctx context.Context) context.Context {
 	data := authz.CtxData{
 		UserID: "SYSTEM",
@@ -780,3 +757,4 @@ func (s *Server) authResponseToken(authReq *AuthRequest, authorizer op.Authorize
 	http.Redirect(w, r, callback, http.StatusFound)
 	return nil
 }
+
