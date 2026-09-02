@@ -136,7 +136,8 @@ func (s *Server) userInfo(
 // prefix are added to the returned audience.
 //
 // If projectRoleAssertion is true and there were no specific roles requested,
-// the current projectID will always be parts of the returned audience.
+// the audience from the scope and the current projectID will always be parts
+// of the returned audience, so asserted roles are returned unfiltered.
 func prepareRoles(ctx context.Context, scope []string, projectID string, projectRoleAssertion, currentProjectOnly bool) (roleAudience, requestedRoles []string) {
 	for _, s := range scope {
 		if role, ok := strings.CutPrefix(s, ScopeProjectRolePrefix); ok {
@@ -144,9 +145,9 @@ func prepareRoles(ctx context.Context, scope []string, projectID string, project
 		}
 	}
 
-	// If roles are requested take the audience for those from the scopes,
-	// when currentProjectOnly is not set.
-	if !currentProjectOnly && (len(requestedRoles) > 0 || slices.Contains(scope, ScopeProjectsRoles)) {
+	// If roles are requested or asserted, take the audience for those from
+	// the scopes, when currentProjectOnly is not set.
+	if !currentProjectOnly && (len(requestedRoles) > 0 || slices.Contains(scope, ScopeProjectsRoles) || projectRoleAssertion) {
 		roleAudience = domain.AddAudScopeToAudience(ctx, roleAudience, scope)
 	}
 
@@ -623,3 +624,4 @@ func (c *ContextInfo) SetHTTPResponseBody(resp []byte) error {
 func (c *ContextInfo) GetContent() any {
 	return c.Response
 }
+
