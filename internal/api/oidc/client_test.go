@@ -41,15 +41,28 @@ func TestNewProjectRoles(t *testing.T) {
 	}{
 		{
 			// https://github.com/zitadel/zitadel/issues/12673
-			// role assertion adds the requesting project's role keys as
-			// implicit role scopes; grants of other projects (included
-			// through an audience scope) must not be filtered by them.
-			name:           "requested roles do not filter other projects",
+			// With role assertion and no manual role scopes, requestedRoles is
+			// empty and all grants of the role audience (the requesting
+			// project plus audience scope projects) are asserted in full.
+			name:           "no requested roles returns all granted roles",
 			projectID:      "a",
 			grants:         []query.UserGrant{roleGrant("a", "admin", "user"), roleGrant("b", "admin", "other")},
-			requestedRoles: []string{"admin", "user"},
+			requestedRoles: nil,
 
 			wantProjectRoles:     map[string][]string{"a": {"admin", "user"}, "b": {"admin", "other"}},
+			wantRequestProjectID: "a",
+		},
+		{
+			// https://github.com/zitadel/zitadel/issues/12673#issuecomment-5507130183
+			// Manually requested role scopes are user intent: they filter the
+			// roles of every asserted project, including projects reached
+			// through an audience scope.
+			name:           "requested roles filter all projects",
+			projectID:      "a",
+			grants:         []query.UserGrant{roleGrant("a", "admin", "user"), roleGrant("b", "admin", "other")},
+			requestedRoles: []string{"admin"},
+
+			wantProjectRoles:     map[string][]string{"a": {"admin"}, "b": {"admin"}},
 			wantRequestProjectID: "a",
 		},
 		{
@@ -59,15 +72,6 @@ func TestNewProjectRoles(t *testing.T) {
 			requestedRoles: []string{"admin"},
 
 			wantProjectRoles:     map[string][]string{"a": {"admin"}},
-			wantRequestProjectID: "a",
-		},
-		{
-			name:           "no requested roles returns all granted roles",
-			projectID:      "a",
-			grants:         []query.UserGrant{roleGrant("a", "admin", "user"), roleGrant("b", "admin", "other")},
-			requestedRoles: nil,
-
-			wantProjectRoles:     map[string][]string{"a": {"admin", "user"}, "b": {"admin", "other"}},
 			wantRequestProjectID: "a",
 		},
 		{
