@@ -88,6 +88,24 @@ func Test_prepareRoles(t *testing.T) {
 			wantRequestedRoles: nil,
 		},
 		{
+			// https://github.com/zitadel/zitadel/issues/12673
+			// With project role assertion the audience from the scope must be
+			// asserted even without requested roles, so that roles of other
+			// projects granted to the user are returned unfiltered.
+			name: "project role assertion with audience",
+			args: args{
+				projectID:            "projID",
+				projectRoleAssertion: true,
+				scope: []string{
+					"openid", "profile",
+					domain.ProjectIDScope + "project2" + domain.AudSuffix,
+				},
+				currentProjectOnly: false,
+			},
+			wantRoleAudience:   []string{"project2", "projID"},
+			wantRequestedRoles: nil,
+		},
+		{
 			name: "scope projects roles ignored, current project only",
 			args: args{
 				projectID:            "projID",
@@ -858,3 +876,4 @@ func Test_runUserinfoExecutionTargets(t *testing.T) {
 	assert.Contains(t, logs, `key "foo" already exists`)
 	assert.Contains(t, logs, "extra log entry")
 }
+

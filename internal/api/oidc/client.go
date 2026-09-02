@@ -281,3 +281,4 @@ func (s *Server) checkOrgScopes(ctx context.Context, resourceOwner string, scope
 		return false
 	}), nil
 }
+
