@@ -114,18 +114,8 @@ func newProjectRoles(projectID string, grants []query.UserGrant, requestedRoles 
 	roles := new(projectsRoles)
 	// if specific roles where requested, check if they are granted and append them in the roles list
 	if len(requestedRoles) > 0 {
-		for _, grant := range grants {
-			// Grants of other projects (included through an audience scope) are
-			// asserted in full. Requested role scopes only filter the roles of the
-			// project the client belongs to - role keys of different projects are
-			// independent of each other.
-			if projectID != "" && grant.ProjectID != projectID {
-				for _, role := range grant.Roles {
-					roles.Add(grant.ProjectID, role, grant.ResourceOwner, grant.OrgPrimaryDomain, false)
-				}
-				continue
-			}
-			for _, requestedRole := range requestedRoles {
+		for _, requestedRole := range requestedRoles {
+			for _, grant := range grants {
 				checkGrantedRoles(roles, grant, requestedRole, grant.ProjectID == projectID)
 			}
 		}
@@ -291,3 +281,4 @@ func (s *Server) checkOrgScopes(ctx context.Context, resourceOwner string, scope
 		return false
 	}), nil
 }
+
